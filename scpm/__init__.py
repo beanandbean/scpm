@@ -18,12 +18,18 @@ def _load_impl(env, module, path):
         build_path = env.ModuleRoot(module)
         lib_path = os.path.join(env.Dir(".").srcnode().path, path)
         env.VariantDir(build_path, lib_path, duplicate=False)
+
+        pkgroot = env["PKGROOT"]
+        env.Replace(PKGROOT=build_path.abspath)
         objs = env.SConscript(dirs=build_path)
         if objs:
             # Store unique objects loaded in module
             used = set()
             _loaded_modules[module] = [obj for obj in env.Flatten(
                 objs) if (not obj in used) and (used.add(obj) or True)]
+
+        # Restore original package root
+        env.Replace(PKGROOT=pkgroot)
     return _loaded_modules[module]
 
 
@@ -45,6 +51,7 @@ def setup(env):
             tool(env)
 
     env.Replace(ENV=os.environ)
+    env.Replace(PKGROOT=env.Dir("#scons_build").abspath)
     if not "BUILDROOT" in env:
         env.Replace(BUILDROOT="#scons_build")
     if not "EXTERNALDIR" in env:
