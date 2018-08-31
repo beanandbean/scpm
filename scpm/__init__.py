@@ -25,8 +25,9 @@ def _load_impl(env, module, path):
         if objs:
             # Store unique objects loaded in module
             used = set()
-            _loaded_modules[module] = [obj for obj in env.Flatten(
-                objs) if (not obj in used) and (used.add(obj) or True)]
+            reversed_objs = reversed(env.Flatten(objs))
+            _loaded_modules[module] = list(reversed([
+                obj for obj in reversed_objs if (not obj in used) and (used.add(obj) or True)]))
 
         # Restore original package root
         env.Replace(PKGROOT=pkgroot)
