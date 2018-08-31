@@ -34,6 +34,13 @@ def _load_impl(env, module, path):
     return _loaded_modules[module]
 
 
+def _main_program_impl(env, *args, **kwargs):
+    program = env.Program(*args, **kwargs)
+    env.Default(program)
+    env.Clean(program, "$BUILDROOT")
+    return program
+
+
 def _objects_impl(env, files, *args, **kwargs):
     return env.Flatten([env.Object(f, *args, **kwargs) for f in env.Flatten(files)])
 
@@ -62,6 +69,7 @@ def setup(env):
     env.AddMethod(_module_entry_impl, "ModuleEntry")
 
     env.AddMethod(_load_impl, "Load")
+    env.AddMethod(_main_program_impl, "MainProgram")
     env.AddMethod(_objects_impl, "Objects")
     env.AddMethod(_export_files_impl, "ExportFiles")
 
