@@ -3,19 +3,25 @@ import os
 _loaded_modules = {}
 
 
-def _module_root_impl(env, module):
-    return env.Dir("$BUILDROOT/$EXTERNALDIR/" + module)
+def _package_root_impl(env, package):
+    return env.Dir("$BUILDROOT/$EXTERNALDIR/" + package)
 
 
-def _module_entry_impl(env, module, entry):
-    return env.Entry(os.path.join(env.ModuleRoot(module).path, entry))
+def _package_entry_impl(env, package, entry):
+    return env.Entry(os.path.join(env.PackageRoot(package).path, entry))
+
+
+def _unique_flatten_impl(env, objs):
+    # Store unique objects loaded in module
+    used = set()
+    return list(reversed([obj for obj in reversed(env.Flatten(objs)) if (not obj in used) and (used.add(obj) or True)]))
 
 
 def _load_impl(env, module, path):
     if not module in _loaded_modules:
         _loaded_modules[module] = []
 
-        build_path = env.ModuleRoot(module)
+        build_path = env.PackageRoot(module)
         lib_path = os.path.join(env.Dir(".").srcnode().path, path)
         env.VariantDir(build_path, lib_path, duplicate=False)
 
@@ -23,11 +29,7 @@ def _load_impl(env, module, path):
         env.Replace(PKGROOT=build_path.abspath)
         objs = env.SConscript(dirs=build_path)
         if objs:
-            # Store unique objects loaded in module
-            used = set()
-            reversed_objs = reversed(env.Flatten(objs))
-            _loaded_modules[module] = list(reversed([
-                obj for obj in reversed_objs if (not obj in used) and (used.add(obj) or True)]))
+            _loaded_modules[module] = env.UniqueFlatten(objs)
 
         # Restore original package root
         env.Replace(PKGROOT=pkgroot)
@@ -65,8 +67,10 @@ def setup(env):
     if not "EXTERNALDIR" in env:
         env.Replace(EXTERNALDIR="scons_external")
 
-    env.AddMethod(_module_root_impl, "ModuleRoot")
-    env.AddMethod(_module_entry_impl, "ModuleEntry")
+    env.AddMethod(_package_root_impl, "PackageRoot")
+    env.AddMethod(_package_entry_impl, "PackageEntry")
+
+    env.AddMethod(_unique_flatten_impl, "UniqueFlatten")
 
     env.AddMethod(_load_impl, "Load")
     env.AddMethod(_main_program_impl, "MainProgram")
