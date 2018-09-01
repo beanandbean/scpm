@@ -51,18 +51,26 @@ def _export_files_impl(env, files, to="."):
     return env.Flatten([env.Install(to, env.File(f).srcnode()) for f in env.Flatten(files)])
 
 
-def _export_dir_impl(env, directory, target=".", files="*"):
-    prefix = env.Dir(directory).srcnode()
-    root = prefix.abspath
-    for path, _, _ in os.walk(root):
-        relative = os.path.relpath(path, root)
-        env.ExportFiles(env.Glob(os.path.join(path, files)),
-                        os.path.join(target, relative))
+def _export_dir_impl(env, directory, target=".", files="*", **kwargs):
+    root_dir = env.Dir(directory)
+    root_path = root_dir.abspath
+    srcroot_path = root_dir.srcnode().abspath
+    fs = []
+    for f in env.RecGlob(directory, files, **kwargs):
+        if os.path.commonpath([f.abspath, root_path]) == root_path:
+            relative = os.path.relpath(f.abspath, root_path)
+        elif os.path.commonpath([f.abspath, srcroot_path]) == srcroot_path:
+            relative = os.path.relpath(f.abspath, srcroot_path)
+        else:
+            continue
+        fs += env.ExportFiles(f, os.path.join(target,
+                                              os.path.split(relative)[0]))
+    return fs
 
 
-def _rec_glob_impl(env, directory, files="*"):
+def _rec_glob_impl(env, directory, files="*", **kwargs):
     dir_obj = env.Dir(directory)
-    fs = env.Glob(os.path.join(directory, files))
+    fs = env.Glob(os.path.join(directory, files), **kwargs)
     for item in env.Glob(os.path.join(directory, "*")):
         if isinstance(item, type(dir_obj)):
             subpath = os.path.join(

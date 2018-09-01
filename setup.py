@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="scpm",
-    version="0.1.6",
+    version="0.1.7",
     author="beanandbean",
     author_email="wangsw.a@gmail.com",
     description="SCons Package Manager",
