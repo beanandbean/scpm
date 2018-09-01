@@ -51,6 +51,26 @@ def _export_files_impl(env, files, to="."):
     return env.Flatten([env.Install(to, env.File(f).srcnode()) for f in env.Flatten(files)])
 
 
+def _export_dir_impl(env, directory, target=".", files="*"):
+    prefix = env.Dir(directory).srcnode()
+    root = prefix.abspath
+    for path, _, _ in os.walk(root):
+        relative = os.path.relpath(path, root)
+        env.ExportFiles(env.Glob(os.path.join(path, files)),
+                        os.path.join(target, relative))
+
+
+def _rec_glob_impl(env, directory, files="*"):
+    dir_obj = env.Dir(directory)
+    fs = env.Glob(os.path.join(directory, files))
+    for item in env.Glob(os.path.join(directory, "*")):
+        if isinstance(item, type(dir_obj)):
+            subpath = os.path.join(
+                directory, os.path.relpath(item.path, dir_obj.path))
+            fs += env.RecGlob(subpath, files)
+    return fs
+
+
 def setup(env):
     env.Export(env=env)
 
@@ -62,10 +82,7 @@ def setup(env):
 
     env.Replace(ENV=os.environ)
     env.Replace(PKGROOT=env.Dir("#scons_build").abspath)
-    if not "BUILDROOT" in env:
-        env.Replace(BUILDROOT="#scons_build")
-    if not "EXTERNALDIR" in env:
-        env.Replace(EXTERNALDIR="scons_external")
+    env.SetDefault(BUILDROOT="#scons_build", EXTERNALDIR="scons_external")
 
     env.AddMethod(_package_root_impl, "PackageRoot")
     env.AddMethod(_package_entry_impl, "PackageEntry")
@@ -75,7 +92,10 @@ def setup(env):
     env.AddMethod(_load_impl, "Load")
     env.AddMethod(_main_program_impl, "MainProgram")
     env.AddMethod(_objects_impl, "Objects")
+
     env.AddMethod(_export_files_impl, "ExportFiles")
+    env.AddMethod(_export_dir_impl, "ExportDir")
+    env.AddMethod(_rec_glob_impl, "RecGlob")
 
     env.Append(CPPPATH=[env.Dir("$BUILDROOT/$EXTERNALDIR/")])
 
