@@ -36,10 +36,15 @@ def _load_impl(env, module, path):
     return _loaded_modules[module]
 
 
-def _main_program_impl(env, *args, **kwargs):
+def _main_program_impl(env, *args, default_run=True, **kwargs):
     program = env.Program(*args, **kwargs)
     env.Default(program)
     env.Clean(program, "$BUILDROOT")
+
+    if default_run:
+        run = env.Alias("run", program, program[0].abspath)
+        env.AlwaysBuild(run)
+
     return program
 
 
